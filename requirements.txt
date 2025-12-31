@@ -1,8 +1,4 @@
 pandas
 supabase
 python-dotenv
-<<<<<<< Updated upstream
 pytz
-=======
-pytz
->>>>>>> Stashed changes
