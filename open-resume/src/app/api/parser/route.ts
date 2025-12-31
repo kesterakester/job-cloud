@@ -5,13 +5,28 @@ import { groupTextItemsIntoLines } from 'lib/parse-resume-from-pdf/group-text-it
 import { groupLinesIntoSections } from 'lib/parse-resume-from-pdf/group-lines-into-sections';
 import { extractResumeFromSections } from 'lib/parse-resume-from-pdf/extract-resume-from-sections';
 
+// Helper to set CORS headers
+function setCorsHeaders(res: NextResponse) {
+    res.headers.set('Access-Control-Allow-Origin', '*'); // Allow all domains (or change to your specific frontend URL)
+    res.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res;
+}
+
+export async function OPTIONS() {
+    // Handle preflight OPTIONS request
+    const response = NextResponse.json({}, { status: 200 });
+    return setCorsHeaders(response);
+}
+
 export async function POST(request: Request) {
     try {
         const formData = await request.formData();
         const file = formData.get('file');
 
         if (!file || !(file instanceof Blob)) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+            const errorResponse = NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+            return setCorsHeaders(errorResponse);
         }
 
         const arrayBuffer = await file.arrayBuffer();
@@ -22,9 +37,11 @@ export async function POST(request: Request) {
         const sections = groupLinesIntoSections(lines);
         const resume = extractResumeFromSections(sections);
 
-        return NextResponse.json({ resume });
+        const successResponse = NextResponse.json({ resume });
+        return setCorsHeaders(successResponse);
     } catch (error) {
         console.error('Error parsing resume:', error);
-        return NextResponse.json({ error: 'Failed to process resume' }, { status: 500 });
+        const errorResponse = NextResponse.json({ error: 'Failed to process resume' }, { status: 500 });
+        return setCorsHeaders(errorResponse);
     }
 }
