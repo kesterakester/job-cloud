@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: resume-parser
-    env: docker
-    plan: free
-    region: oregon
-    autoDeploy: false
