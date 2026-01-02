@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Briefcase, Menu, X } from "lucide-react";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import styles from "./Navbar.module.css";
 
 export default function Navbar() {
@@ -53,6 +54,9 @@ export default function Navbar() {
                     >
                         Companies
                     </Link>
+                    <div className="ml-2 pl-2 border-l border-white/10 h-6 flex items-center">
+                        <FeedbackWidget />
+                    </div>
                 </div>
             </div>
 
@@ -80,6 +84,9 @@ export default function Navbar() {
                     >
                         Companies
                     </Link>
+                    <div className="pt-2 mt-2 border-t border-white/10">
+                        <FeedbackWidget className={styles.mobileNavLink} />
+                    </div>
                 </div>
             )}
         </nav>
