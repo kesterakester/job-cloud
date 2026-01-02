@@ -74,3 +74,18 @@ on public.jobs for update to service_role using (true);
 
 -- Index
 create index idx_jobs_crawled_date on public.jobs(crawled_date);
+
+-- Feedback Table
+create table if not exists public.feedback (
+  id uuid default gen_random_uuid() primary key,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  feedback_type text not null check (feedback_type in ('role_request', 'location_request', 'general_feedback')),
+  content text not null,
+  status text default 'pending' check (status in ('pending', 'reviewed', 'implemented'))
+);
+
+-- RLS for Feedback
+alter table public.feedback enable row level security;
+
+create policy "Allow public insert access"
+on public.feedback for insert to anon with check (true);
