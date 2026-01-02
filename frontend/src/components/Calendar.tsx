@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import styles from "./Calendar.module.css";
 
 interface CalendarProps {
@@ -70,6 +70,7 @@ export default function Calendar({ selectedDate, onChange, onClose }: CalendarPr
         if (!date) return;
         if (!isDateDisabled(date)) {
             onChange(date);
+            onClose();
         }
     };
 
@@ -134,9 +135,6 @@ export default function Calendar({ selectedDate, onChange, onClose }: CalendarPr
             {/* Footer */}
             <div className={styles.footer}>
                 <button className={styles.resetBtn} onClick={handleReset}>Reset</button>
-                <button className={styles.confirmBtn} onClick={onClose}>
-                    <Check size={18} />
-                </button>
             </div>
         </div>
     );
