@@ -2,8 +2,6 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  max-width: 1600px;
-  margin: 0 auto;
   background-color: var(--background);
   color: var(--foreground);
 }
@@ -24,6 +22,9 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .logoSection {
@@ -260,6 +261,9 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
@@ -829,6 +833,16 @@
     margin-top: 0.5rem;
   }
 
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+
+    to {
+      transform: translateX(0);
+    }
+  }
+
   /* Job Details Mobile Overlay */
   .jobDetails {
     display: none;
@@ -849,6 +863,7 @@
     height: calc(100vh - 60px);
     border-radius: 0;
     border: none;
+    animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .detailsContainer {
@@ -856,7 +871,29 @@
     border-radius: 0;
   }
 
-  /* Hide job list when details are open if desired, but overlay is easier */
+  /* Mobile Sticky Back Button */
+  .backButton {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(9, 9, 11, 0.95);
+    backdrop-filter: blur(8px);
+    width: 100%;
+    padding: 1rem;
+    margin: 0;
+    border-bottom: 1px solid var(--card-border);
+    font-weight: 600;
+    color: white;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Reset margin inside header since we moved it above or styled it to be flush */
+  .detailsHeader {
+    padding-top: 1rem;
+  }
 }
 
 /* Footer */
