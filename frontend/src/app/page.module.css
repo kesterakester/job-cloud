@@ -235,3 +235,327 @@
     justify-content: center;
   }
 }
+
+/* Header Section in Center Column */
+.centerHeader {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.iconWrapper {
+  width: 80px;
+  height: 80px;
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  margin: 0 auto 1.5rem auto;
+}
+
+.centerTitle {
+  font-size: clamp(2rem, 5vw, 2.5rem);
+  font-weight: 800;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.centerDescription {
+  color: #a1a1aa;
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Upload Area */
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.uploadInput {
+  display: none;
+}
+
+.uploadLabel {
+  cursor: pointer;
+  padding: 2.5rem 2rem;
+  border: 2px dashed #3f3f46;
+  border-radius: 16px;
+  width: 100%;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.uploadLabel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #52525b;
+}
+
+.uploadText {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: white;
+}
+
+.analyzeButton {
+  width: 100%;
+  justify-content: center;
+}
+
+.loadingText {
+  font-size: 0.9rem;
+  color: #e4e4e7;
+  text-align: center;
+  margin-top: 0.5rem;
+  opacity: 0.9;
+}
+
+.errorBox {
+  color: #ef4444;
+  margin-top: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 100%;
+  text-align: center;
+}
+
+.errorIcon {
+  display: inline;
+  margin-right: 5px;
+  vertical-align: text-bottom;
+}
+
+/* Results Area */
+.resultsContainer {
+  width: 100%;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.scoreCard {
+  background: #18181b;
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid #27272a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.scoreCardTitle {
+  font-size: 1.1rem;
+  color: #a1a1aa;
+  margin-bottom: 1rem;
+}
+
+.scoreCircle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.scoreValue {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.scoreDeviation {
+  font-size: 0.8rem;
+  color: #a1a1aa;
+  margin-top: 4px;
+}
+
+.scoreMessage {
+  font-size: 0.9rem;
+  color: #71717a;
+}
+
+.detailsCard {
+  background: #18181b;
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid #27272a;
+}
+
+.detailsHeader {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.breakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.breakdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.breakdownLabel {
+  text-transform: capitalize;
+  color: #d4d4d8;
+}
+
+.breakdownValue {
+  font-weight: bold;
+  color: #71717a;
+}
+
+.breakdownValuePositive {
+  color: #4ade80;
+}
+
+.feedbackSection {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #27272a;
+}
+
+.feedbackHeader {
+  font-size: 0.95rem;
+  color: #f87171;
+  margin-bottom: 0.5rem;
+}
+
+.feedbackList {
+  padding-left: 1.2rem;
+  color: #a1a1aa;
+  font-size: 0.9rem;
+}
+
+.resultActions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.matchButton {
+  flex: 1;
+  justify-content: center;
+  font-size: 0.9rem;
+  padding: 0.8rem;
+  border: none;
+  cursor: pointer;
+}
+
+.resetButton {
+  padding: 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3f3f46;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #52525b;
+}
+
+/* Modal Content */
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modalIconWrapper {
+  width: 60px;
+  height: 60px;
+  background: rgba(234, 179, 8, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  color: #eab308;
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.75rem;
+}
+
+.modalText {
+  color: #a1a1aa;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.modalActions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.modalBrowseButton {
+  flex: 1;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+.modalCloseButton {
+  background: transparent;
+  border: 1px solid #3f3f46;
+  color: #e4e4e7;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.modalCloseButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #52525b;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 640px) {
+  .detailsHeader {
+    font-size: 1.1rem;
+  }
+
+  .scoreValue {
+    font-size: 2rem;
+  }
+
+  .centerTitle {
+    font-size: 1.75rem;
+  }
+}
