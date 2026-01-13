@@ -3,12 +3,16 @@ name: Daily Job Scraper
 on:
   schedule:
     - cron: '30 18 * * *'
-  workflow_dispatch: # Allows manual triggering from the Actions tab
+  workflow_dispatch:
 
 jobs:
   scrape-and-upload:
     runs-on: ubuntu-latest
-    
+
+    strategy:
+      matrix:
+        batch: [batch1, batch2, batch3, batch4]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -28,5 +32,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        # -u forces stdout to be unbuffered so we see logs immediately
+          JOB_BATCH: ${{ matrix.batch }}
         run: python -u run_jobs_supabase.py
