@@ -1,10 +1,22 @@
 {
     "cities": {
-        "Kochi": "Kochi, Kerala, India",
-        "Coimbatore": "Coimbatore, Tamil Nadu, India"
+        "Mumbai": "Mumbai, Maharashtra, India",
+        "Chennai": "Chennai, Tamil Nadu, India",
+        "Hyderabad": "Hyderabad, Telangana, India",
+        "Bengaluru": "Bengaluru, Karnataka, India",
+        "Pune": "Pune, Maharashtra, India",
+        "Kolkata": "Kolkata, West Bengal, India"
     },
     "roles": [
-        "machine learning engineer",
-        "systems administrator"
+        "software engineer",
+        "data scientist",
+        "ai engineer",
+        "business analyst",
+        "data analyst",
+        "cloud engineer",
+        "cybersecurity analyst",
+        "digital marketing specialist",
+        "quality assurance engineer",
+        "customer service representative"
     ]
 }
