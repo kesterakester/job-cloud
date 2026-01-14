@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { MessageSquare, Lock } from 'lucide-react'
+import { MessageSquare, Lock, Building2 } from 'lucide-react'
 import styles from './admin.module.css'
 
 export default function AdminPage() {
@@ -16,6 +16,17 @@ export default function AdminPage() {
                 </div>
                 <h2 className={styles.cardTitle}>Feedback</h2>
                 <p className={styles.cardDesc}>View user feedback, role requests, and location requests.</p>
+            </Link>
+
+            <Link
+                href="/admin/companies"
+                className={styles.card}
+            >
+                <div className={styles.cardIcon}>
+                    <Building2 size={24} color="#2563eb" />
+                </div>
+                <h2 className={styles.cardTitle}>Companies</h2>
+                <p className={styles.cardDesc}>Browse jobs by company and manage company details.</p>
             </Link>
 
             <div className={`${styles.card} ${styles.cardDisabled}`}>
