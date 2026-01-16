@@ -1,129 +1,88 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Loader2, Lock, LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { Loader2, LogOut, ShieldAlert, ArrowLeft, LayoutDashboard, MessageSquare, Building2, Users } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 import styles from './admin.module.css'
-
-// Hardcoded credentials
-const ADMIN_USERNAME = "admin"
-const ADMIN_PASSWORD = "password"
 
 export default function AdminLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [loading, setLoading] = useState(true)
-    const [username, setUsername] = useState('')
-    const [password, setPassword] = useState('')
-    const [fakePassword, setFakePassword] = useState('')
-    const [authError, setAuthError] = useState<string | null>(null)
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [loadingText, setLoadingText] = useState('Initiating...')
-    const [countdown, setCountdown] = useState(60)
-    const [exploded, setExploded] = useState(false)
+    const { user, loading, isAdmin, signOut } = useAuth()
     const router = useRouter()
+    const pathname = usePathname()
+
+    // State for Gimmick (Unauthorized Access)
+    const [countdown, setCountdown] = useState(30);
+    const [exploded, setExploded] = useState(false);
 
     useEffect(() => {
-        // Check for existing session in localStorage
-        const session = localStorage.getItem('admin_session')
-        if (session === 'true') {
-            setIsAuthenticated(true)
+        if (!loading && !user) {
+            router.push('/login?redirect=/admin')
         }
-        setLoading(false)
+    }, [user, loading, router])
 
-        // Bomb countdown
-        const timer = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer)
-                    setExploded(true)
-                    // Play explosion sound
-                    // Play synthesized explosion sound (no external file needed)
-                    try {
-                        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                        if (AudioContext) {
-                            const ctx = new AudioContext();
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
+    // Timer Effect - Only runs if user is logged in but NOT admin
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
 
-                            // Create noise buffer for explosion
-                            const bufferSize = ctx.sampleRate * 2; // 2 seconds
-                            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                            const data = buffer.getChannelData(0);
-                            for (let i = 0; i < bufferSize; i++) {
-                                data[i] = Math.random() * 2 - 1;
+        if (user && !loading && !isAdmin) {
+            timer = setInterval(() => {
+                setCountdown((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        setExploded(true);
+
+                        // Play explosion sound effect
+                        try {
+                            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                            if (AudioContext) {
+                                const ctx = new AudioContext();
+                                const osc = ctx.createOscillator();
+                                const gain = ctx.createGain();
+
+                                const bufferSize = ctx.sampleRate * 2;
+                                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                                const data = buffer.getChannelData(0);
+                                for (let i = 0; i < bufferSize; i++) {
+                                    data[i] = Math.random() * 2 - 1;
+                                }
+
+                                const noise = ctx.createBufferSource();
+                                noise.buffer = buffer;
+
+                                const filter = ctx.createBiquadFilter();
+                                filter.type = 'lowpass';
+                                filter.frequency.value = 1000;
+
+                                noise.connect(filter);
+                                filter.connect(gain);
+                                gain.connect(ctx.destination);
+
+                                gain.gain.setValueAtTime(1, ctx.currentTime);
+                                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1);
+
+                                noise.start();
+                                noise.stop(ctx.currentTime + 2);
                             }
-
-                            const noise = ctx.createBufferSource();
-                            noise.buffer = buffer;
-
-                            // Filter to make it sound like an explosion (lowpass)
-                            const filter = ctx.createBiquadFilter();
-                            filter.type = 'lowpass';
-                            filter.frequency.value = 1000;
-
-                            noise.connect(filter);
-                            filter.connect(gain);
-                            gain.connect(ctx.destination);
-
-                            // Envelope for explosion (loud attack, long decay)
-                            gain.gain.setValueAtTime(1, ctx.currentTime);
-                            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1);
-
-                            noise.start();
-                            noise.stop(ctx.currentTime + 2);
+                        } catch (e) {
+                            console.error("Audio synth failed", e);
                         }
-                    } catch (e) {
-                        console.error("Audio synth failed", e);
+                        return 0;
                     }
-                    return 0
-                }
-                return prev - 1
-            })
-        }, 1000)
-
-        return () => clearInterval(timer)
-    }, [])
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsSubmitting(true)
-        setAuthError(null)
-
-        const funnyMessages = [
-            "Intercepting satellite signals...",
-            "Downloading more RAM...",
-            "Consulting the spirits...",
-            "Asking PM for permission...",
-            "Cracking the matrix..."
-        ];
-
-        for (const msg of funnyMessages) {
-            setLoadingText(msg);
-            await new Promise(resolve => setTimeout(resolve, 600));
+                    return prev - 1;
+                });
+            }, 1000);
         }
 
-        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-            localStorage.setItem('admin_session', 'true')
-            setIsAuthenticated(true)
-        } else {
-            setAuthError('Skill issue detected. Git gud.')
-        }
-        setIsSubmitting(false)
-    }
-
-    const handleLogout = () => {
-        localStorage.removeItem('admin_session')
-        setIsAuthenticated(false)
-        setUsername('')
-        setPassword('')
-        setFakePassword('')
-        router.refresh()
-    }
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [user, loading, isAdmin]);
 
     if (loading) {
         return (
@@ -133,20 +92,32 @@ export default function AdminLayout({
         )
     }
 
-    if (!isAuthenticated) {
+    if (!user) {
+        return null; // Redirecting...
+    }
+
+    if (!isAdmin) {
         if (exploded) {
             return (
                 <div className={`${styles.loadingContainer} ${styles.shake}`}>
                     <div className={styles.blastOverlay}></div>
                     <div className={styles.explodedContainer}>
-                        <div style={{ fontSize: '5rem', marginBottom: '2rem' }}>🎭 🦹‍♂️</div>
-                        <div className={styles.explodedText}>YOU ARE HACKED</div>
-                        <p>Vercel production database has been wiped.</p>
-                        <p>FBI agents have been dispatched to your location.</p>
-                        <p style={{ marginTop: '2rem', color: '#6b7280' }}>(Just kidding. Refresh the page to try again.)</p>
+                        <div style={{ fontSize: '5rem', marginBottom: '2rem' }}>⛔️ ☠️</div>
+                        <div className={styles.explodedText}>ACCESS TERMINATED</div>
+                        <p>User account has been flagged for unauthorized entry attempts.</p>
+                        <p>System admin has been notified of your IP address.</p>
+                        <div className="flex flex-col gap-3 mt-8">
+                            <Link
+                                href="/"
+                                className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                                <ArrowLeft size={18} />
+                                Escape to Safety
+                            </Link>
+                        </div>
                     </div>
                 </div>
-            )
+            );
         }
 
         return (
@@ -154,27 +125,24 @@ export default function AdminLayout({
                 <div className={styles.loginCard} style={{ borderColor: '#ef4444', boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)' }}>
                     <div className={styles.loginHeader}>
                         <div className={styles.iconWrapper} style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-                            <Lock size={24} />
+                            <ShieldAlert size={24} />
                         </div>
-                        <h1 className={styles.title} style={{ color: '#ef4444' }}>⚠️ SELF DESTRUCT SEQUENCE ⚠️</h1>
-                        <p className={styles.subtitle} style={{ color: '#f87171' }}>Vercel Deployment Purge Imminent</p>
+                        <h1 className={styles.title} style={{ color: '#ef4444' }}>⚠️ UNAUTHORIZED ACCESS ⚠️</h1>
+                        <p className={styles.subtitle} style={{ color: '#f87171' }}>Self-Destruct Sequence Initiated</p>
                         <div className={styles.bombTimer}>
                             00:{countdown.toString().padStart(2, '0')}
                         </div>
                     </div>
 
-                    <form onSubmit={handleLogin} className={styles.form}>
-
+                    <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
                         <div className={styles.inputGroup}>
                             <label className={styles.label} style={{ color: '#ef4444' }}>Authorization Code Alpha</label>
                             <input
                                 type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                disabled
                                 className={styles.input}
-                                placeholder="Input Command Authority"
-                                style={{ borderColor: '#7f1d1d' }}
-                                required
+                                placeholder="ACCESS DENIED"
+                                style={{ borderColor: '#7f1d1d', backgroundColor: '#450a0a', cursor: 'not-allowed' }}
                             />
                         </div>
 
@@ -182,19 +150,10 @@ export default function AdminLayout({
                             <label className={styles.label} style={{ color: '#ef4444' }}>Authorization Code Beta</label>
                             <input
                                 type="text"
-                                value={'*'.repeat(password.length)}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val.length < password.length) {
-                                        setPassword(password.slice(0, val.length));
-                                    } else {
-                                        setPassword(password + val.slice(password.length));
-                                    }
-                                }}
+                                disabled
                                 className={styles.input}
-                                placeholder="Input Override Sequence"
-                                style={{ borderColor: '#7f1d1d' }}
-                                required
+                                placeholder="ACCESS DENIED"
+                                style={{ borderColor: '#7f1d1d', backgroundColor: '#450a0a', cursor: 'not-allowed' }}
                             />
                         </div>
 
@@ -202,65 +161,98 @@ export default function AdminLayout({
                             <label className={styles.label} style={{ color: '#ef4444' }}>Do NOT Cut This Wire</label>
                             <input
                                 type="text"
-                                value={'*'.repeat(fakePassword.length)}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val.length < fakePassword.length) {
-                                        setFakePassword(fakePassword.slice(0, val.length));
-                                    } else {
-                                        setFakePassword(fakePassword + val.slice(fakePassword.length));
-                                    }
-                                }}
+                                disabled
                                 className={styles.input}
-                                placeholder="Cutting this speeds up timer..."
-                                style={{ borderColor: '#7f1d1d' }}
-                                required
+                                placeholder="SYSTEM LOCKED"
+                                style={{ borderColor: '#7f1d1d', backgroundColor: '#450a0a', cursor: 'not-allowed' }}
                             />
                         </div>
 
-                        {authError && (
-                            <div className={styles.errorBox} style={{ backgroundColor: '#450a0a', borderColor: '#ef4444', color: '#fca5a5' }}>
-                                {authError}
-                            </div>
-                        )}
-
                         <button
-                            type="submit"
-                            disabled={isSubmitting}
+                            type="button"
+                            disabled
                             className={styles.redButton}
+                            style={{ opacity: 0.5, cursor: 'not-allowed' }}
                         >
-                            {isSubmitting ? (
-                                <div className="flex items-center gap-2">
-                                    <Loader2 className="animate-spin" size={20} />
-                                    <span>{loadingText}</span>
-                                </div>
-                            ) : 'ABORT DESTRUCTION'}
+                            ABORT DESTRUCTION (DISABLED)
                         </button>
+
+                        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                            <Link href="/" className="text-gray-500 hover:text-gray-400 text-sm">
+                                Run away (Return Home)
+                            </Link>
+                        </div>
                     </form>
                 </div>
             </div>
-        )
+        );
     }
+
+    // Determine current section title based on pathname
+    let sectionTitle = "Overview";
+    if (pathname?.includes('/feedback')) sectionTitle = "Feedback";
+    if (pathname?.includes('/companies')) sectionTitle = "Companies";
+    if (pathname?.includes('/users')) sectionTitle = "Users";
 
     return (
         <div className={styles.container}>
-            <header className={styles.dashboardHeader}>
-                <Link href="/admin" style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div>
-                        <h1 className={styles.dashboardTitle}>Admin Dashboard</h1>
-                        <p className={styles.subtitle}>Manage your application settings and feedback</p>
-                    </div>
-                </Link>
-                <button
-                    onClick={handleLogout}
-                    className={styles.signOutButton}
-                >
-                    <LogOut size={16} />
-                    Sign Out
-                </button>
-            </header>
+            {/* Sidebar */}
+            <aside className={styles.sidebar}>
+                <div className={styles.sidebarHeader}>
+                    <Link href="/admin" className={styles.sidebarTitle}>
+                        <ShieldAlert size={28} color="#3b82f6" />
+                        <span>HireMind Admin</span>
+                    </Link>
+                </div>
 
-            {children}
+                <nav className={styles.sidebarNav}>
+                    <Link
+                        href="/admin"
+                        className={`${styles.navItem} ${pathname === '/admin' ? styles.navItemActive : ''}`}
+                    >
+                        <LayoutDashboard size={20} />
+                        Dashboard
+                    </Link>
+
+                    <Link
+                        href="/admin/feedback"
+                        className={`${styles.navItem} ${pathname?.includes('/feedback') ? styles.navItemActive : ''}`}
+                    >
+                        <MessageSquare size={20} />
+                        Feedback
+                    </Link>
+
+                    <Link
+                        href="/admin/companies"
+                        className={`${styles.navItem} ${pathname?.includes('/companies') ? styles.navItemActive : ''}`}
+                    >
+                        <Building2 size={20} />
+                        Companies
+                    </Link>
+
+                    <Link
+                        href="/admin/users"
+                        className={`${styles.navItem} ${pathname?.includes('/users') ? styles.navItemActive : ''}`}
+                    >
+                        <Users size={20} />
+                        Users
+                    </Link>
+                </nav>
+
+                <div className={styles.sidebarFooter}>
+                    <div className={styles.userProfile}>
+                        <p className={styles.userEmail}>{user.email}</p>
+                    </div>
+                </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <main className={styles.mainContent}>
+                <header className={styles.contentHeader}>
+                    <h1 className={styles.contentTitle}>{sectionTitle}</h1>
+                </header>
+                {children}
+            </main>
         </div>
     )
 }
