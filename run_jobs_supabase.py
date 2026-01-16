@@ -28,23 +28,25 @@ except FileNotFoundError:
 ROLE_BATCHES = {
     "batch1": [
         "software engineer",
-        "data scientist",
-        "ai engineer"
     ],
     "batch2": [
-        "business analyst",
-        "data analyst"
+        "data scientist",
     ],
     "batch3": [
-        "cloud engineer",
-        "cybersecurity analyst"
+        "ai engineer",
+        "business analyst",
+        "data analyst",
+        
     ],
     "batch4": [
+        "cloud engineer",
+        "cybersecurity analyst",
         "digital marketing specialist",
         "quality assurance engineer",
-        "customer service representative"
+        "customer service representative",
     ]
 }
+
 
 roles = ROLE_BATCHES.get(JOB_BATCH, all_roles)
 
