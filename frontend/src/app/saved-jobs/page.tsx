@@ -15,6 +15,7 @@ import {
     Building
 } from "lucide-react";
 import styles from "./saved.module.css";
+import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar"; // Assuming globally available or we can just skip for now as Layout has it
 
 type Job = {
@@ -115,13 +116,18 @@ export default function SavedJobsPage() {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <div className={styles.title}>
-                    <Bookmark size={32} className="text-blue-500" />
-                    Saved Jobs
+                <div className={styles.headerContent}>
+                    <div className={styles.title}>
+                        <Bookmark size={32} className="text-blue-500" />
+                        Saved Jobs
+                    </div>
+                    <p className={styles.note}>
+                        Note: Jobs older than 7 days will be removed as per the database policy.
+                    </p>
                 </div>
                 <Link href="/jobs" className={styles.backLink}>
                     <ArrowLeft size={18} />
-                    Browse More Jobs
+                    Back to Jobs
                 </Link>
             </header>
 
@@ -179,6 +185,7 @@ export default function SavedJobsPage() {
                     ))}
                 </div>
             )}
+            <Footer />
         </div>
     );
 }
