@@ -4,8 +4,9 @@ import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Check, X as XIcon } from "lucide-react";
+import { Loader2, Check, X as XIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import Footer from "@/components/Footer";
 import styles from "../auth.module.css";
 
 function SignupContent() {
@@ -73,133 +74,136 @@ function SignupContent() {
     if (success) {
         return (
             <div className={styles.container}>
-                <div className={`${styles.card} ${styles.successBox}`}>
-                    <h2 className={styles.successTitle}>
-                        Check your email
-                    </h2>
-                    <p className={styles.subtitle} style={{ marginBottom: '2rem' }}>
-                        We've sent a confirmation link to <strong>{email}</strong>. Please click the link to verify your account.
-                    </p>
-                    <Link
-                        href="/login"
-                        className={styles.button}
-                        style={{ textDecoration: 'none' }}
-                    >
-                        Back to Login
-                    </Link>
+                <div className={styles.contentWrapper}>
+                    <div className={`${styles.card} ${styles.successBox}`}>
+                        <h2 className={styles.successTitle}>
+                            Check your email
+                        </h2>
+                        <p className={styles.subtitle} style={{ marginBottom: '2rem' }}>
+                            We've sent a confirmation link to <strong>{email}</strong>. Please click the link to verify your account.
+                        </p>
+                        <Link
+                            href="/login"
+                            className={styles.button}
+                            style={{ textDecoration: 'none' }}
+                        >
+                            Back to Login
+                        </Link>
+                    </div>
                 </div>
+                <Footer />
             </div>
         );
     }
 
     return (
         <div className={styles.container}>
-            <Link href="/" className={styles.backLink}>
-                <ArrowLeft size={20} />
-                Back to Home
-            </Link>
 
-            <div className={styles.card}>
-                <div className={styles.header}>
-                    <h1 className={styles.title}>
-                        Create Account
-                    </h1>
-                    <p className={styles.subtitle}>Join to unlock all features</p>
-                </div>
 
-                <form onSubmit={handleSignup} className={styles.form}>
-                    {error && (
-                        <div className={styles.error}>
-                            {error}
+            <div className={styles.contentWrapper}>
+                <div className={styles.card}>
+                    <div className={styles.header}>
+                        <h1 className={styles.title}>
+                            Create Account
+                        </h1>
+                        <p className={styles.subtitle}>Join to unlock all features</p>
+                    </div>
+
+                    <form onSubmit={handleSignup} className={styles.form}>
+                        {error && (
+                            <div className={styles.error}>
+                                {error}
+                            </div>
+                        )}
+
+                        <div className={styles.row}>
+                            <div className={styles.inputGroup}>
+                                <label className={styles.label}>First Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    className={styles.input}
+                                    placeholder="John"
+                                />
+                            </div>
+                            <div className={styles.inputGroup}>
+                                <label className={styles.label}>Last Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    className={styles.input}
+                                    placeholder="Doe"
+                                />
+                            </div>
                         </div>
-                    )}
 
-                    <div className={styles.row}>
                         <div className={styles.inputGroup}>
-                            <label className={styles.label}>First Name</label>
+                            <label className={styles.label}>Email</label>
                             <input
-                                type="text"
+                                type="email"
                                 required
-                                value={firstName}
-                                onChange={(e) => setFirstName(e.target.value)}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className={styles.input}
-                                placeholder="John"
+                                placeholder="you@example.com"
+                                autoComplete="email"
+                                autoCapitalize="none"
+                                autoCorrect="off"
                             />
                         </div>
+
                         <div className={styles.inputGroup}>
-                            <label className={styles.label}>Last Name</label>
+                            <label className={styles.label}>Password</label>
                             <input
-                                type="text"
+                                type="password"
                                 required
-                                value={lastName}
-                                onChange={(e) => setLastName(e.target.value)}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 className={styles.input}
-                                placeholder="Doe"
+                                placeholder="••••••••"
                             />
-                        </div>
-                    </div>
 
-                    <div className={styles.inputGroup}>
-                        <label className={styles.label}>Email</label>
-                        <input
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className={styles.input}
-                            placeholder="you@example.com"
-                            autoComplete="email"
-                            autoCapitalize="none"
-                            autoCorrect="off"
-                        />
-                    </div>
+                            {/* Password Checklist */}
+                            <div className={styles.passwordRequirements}>
+                                <div className={styles.requirementTitle}>Password Requirements</div>
 
-                    <div className={styles.inputGroup}>
-                        <label className={styles.label}>Password</label>
-                        <input
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className={styles.input}
-                            placeholder="••••••••"
-                        />
-
-                        {/* Password Checklist */}
-                        <div className={styles.passwordRequirements}>
-                            <div className={styles.requirementTitle}>Password Requirements</div>
-
-                            <div className={`${styles.requirementItem} ${hasMinLength ? styles.requirementMet : styles.requirementUnmet}`}>
-                                {hasMinLength ? <Check size={14} /> : <div style={{ width: 14 }} />}
-                                At least 8 characters
-                            </div>
-                            <div className={`${styles.requirementItem} ${hasNumber ? styles.requirementMet : styles.requirementUnmet}`}>
-                                {hasNumber ? <Check size={14} /> : <div style={{ width: 14 }} />}
-                                At least one number
-                            </div>
-                            <div className={`${styles.requirementItem} ${hasSpecialChar ? styles.requirementMet : styles.requirementUnmet}`}>
-                                {hasSpecialChar ? <Check size={14} /> : <div style={{ width: 14 }} />}
-                                At least one special character
+                                <div className={`${styles.requirementItem} ${hasMinLength ? styles.requirementMet : styles.requirementUnmet}`}>
+                                    {hasMinLength ? <Check size={14} /> : <div style={{ width: 14 }} />}
+                                    At least 8 characters
+                                </div>
+                                <div className={`${styles.requirementItem} ${hasNumber ? styles.requirementMet : styles.requirementUnmet}`}>
+                                    {hasNumber ? <Check size={14} /> : <div style={{ width: 14 }} />}
+                                    At least one number
+                                </div>
+                                <div className={`${styles.requirementItem} ${hasSpecialChar ? styles.requirementMet : styles.requirementUnmet}`}>
+                                    {hasSpecialChar ? <Check size={14} /> : <div style={{ width: 14 }} />}
+                                    At least one special character
+                                </div>
                             </div>
                         </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading || !isPasswordValid}
+                            className={styles.button}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : "Sign Up"}
+                        </button>
+                    </form>
+
+                    <div className={styles.footer}>
+                        Already have an account?{" "}
+                        <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className={styles.link}>
+                            Sign in
+                        </Link>
                     </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading || !isPasswordValid}
-                        className={styles.button}
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : "Sign Up"}
-                    </button>
-                </form>
-
-                <div className={styles.footer}>
-                    Already have an account?{" "}
-                    <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className={styles.link}>
-                        Sign in
-                    </Link>
                 </div>
             </div>
+            <Footer />
         </div>
     );
 }

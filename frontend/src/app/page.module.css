@@ -663,3 +663,110 @@
   color: var(--primary);
   margin-bottom: 1rem;
 }
+
+/* Recent Scans Section */
+.recentScansContainer {
+  margin-top: 2rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.recentScansTitle {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: white;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scansIcon {
+  color: #60a5fa;
+  /* blue-400 */
+}
+
+.scansList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scanItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s;
+}
+
+.scanItem:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.scanInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.scanName {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.scanDate {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  /* gray-400 */
+}
+
+.scanScoreContainer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.scanScoreValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.scanScoreLabel {
+  font-size: 0.625rem;
+  color: #6b7280;
+  /* gray-500 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.scoreGreen {
+  color: #4ade80;
+  /* green-400 */
+}
+
+.scoreYellow {
+  color: #facc15;
+  /* yellow-400 */
+}
+
+.scoreRed {
+  color: #f87171;
+  /* red-400 */
+}
+
+@media (max-width: 640px) {
+  .scanName {
+    max-width: 120px;
+  }
+}

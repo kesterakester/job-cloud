@@ -21,7 +21,13 @@ import {
     RefreshCw,
     Share2,
     CheckCircle,
-    Bookmark
+    Bookmark,
+    CheckSquare,
+    Square,
+    ChevronDown,
+    ChevronUp,
+    Filter,
+    Check
 } from "lucide-react";
 import styles from "./page.module.css";
 import Calendar from "@/components/Calendar";
@@ -112,21 +118,33 @@ export default function Home() {
     const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+    const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
     const [saving, setSaving] = useState(false);
+    const [applying, setApplying] = useState(false);
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-    // Fetch saved jobs
+    // Fetch saved and applied jobs
     useEffect(() => {
-        const fetchSaved = async () => {
+        const fetchUserData = async () => {
             if (!user) {
                 setSavedJobIds(new Set());
+                setAppliedJobIds(new Set());
                 return;
             }
-            const { data } = await supabase.from('saved_jobs').select('job_id').eq('user_id', user.id);
-            if (data) {
-                setSavedJobIds(new Set(data.map(d => d.job_id)));
+
+            // Fetch saved jobs
+            const { data: savedData } = await supabase.from('saved_jobs').select('job_id').eq('user_id', user.id);
+            if (savedData) {
+                setSavedJobIds(new Set(savedData.map(d => d.job_id)));
+            }
+
+            // Fetch applied jobs (if table exists - assuming it does based on user request)
+            const { data: appliedData } = await supabase.from('applied_jobs').select('job_id').eq('user_id', user.id);
+            if (appliedData) {
+                setAppliedJobIds(new Set(appliedData.map(d => d.job_id)));
             }
         };
-        fetchSaved();
+        fetchUserData();
     }, [user]);
 
     const handleToggleSave = async (jobId: string) => {
@@ -160,6 +178,49 @@ export default function Home() {
         }
         setSaving(false);
     };
+
+    const handleToggleApplied = async (job: Job, forceApply: boolean = false) => {
+        if (!user) {
+            // Usually auth check happens in handleApply, but safety first
+            return;
+        }
+        const jobId = job.id;
+        if (applying) return;
+        setApplying(true);
+
+        const isApplied = appliedJobIds.has(jobId);
+
+        if (isApplied && !forceApply) {
+            // Remove application (Mark as not applied)
+            const { error } = await supabase.from('applied_jobs').delete().match({ user_id: user.id, job_id: jobId });
+            if (!error) {
+                setAppliedJobIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(jobId);
+                    return next;
+                });
+            }
+        } else if (!isApplied) {
+            // Mark as applied with snapshot data
+            const { error } = await supabase.from('applied_jobs').insert({
+                user_id: user.id,
+                job_id: jobId,
+                job_title: job.title,
+                company_name: job.company,
+                job_url: job.job_url,
+                location: job.location
+            });
+
+            if (!error) {
+                setAppliedJobIds(prev => {
+                    const next = new Set(prev);
+                    next.add(jobId);
+                    return next;
+                });
+            }
+        }
+        setApplying(false);
+    }
 
     // URL Handling
     useEffect(() => {
@@ -203,12 +264,26 @@ export default function Home() {
         }
     };
 
-    // Search State
+    // Search State (Text Inputs)
     const [searchQuery, setSearchQuery] = useState("");
     const [companyQuery, setCompanyQuery] = useState("");
     const [locationQuery, setLocationQuery] = useState("");
     const [jobTypeQuery, setJobTypeQuery] = useState("");
     const [jobLevelQuery, setJobLevelQuery] = useState("");
+
+    // Selected Options State (Multi-select)
+    const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+    const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
+    const [selectedJobLevels, setSelectedJobLevels] = useState<string[]>([]);
+    const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
+    const toggleSelection = (item: string, list: string[], setList: (l: string[]) => void) => {
+        if (list.includes(item)) {
+            setList(list.filter(i => i !== item));
+        } else {
+            setList([...list, item]);
+        }
+    };
 
     // Suggestion Visibility State
     const [showRoleSuggestions, setShowRoleSuggestions] = useState(false);
@@ -357,17 +432,68 @@ export default function Home() {
         const jobType = (job.job_type || "").toLowerCase();
         const jobLevel = (job.job_level || "").toLowerCase();
 
-        const matchesTitle = normSearch ? jobTitle.includes(normSearch) : true;
-        const matchesCompany = normCompany ? jobCompany.includes(normCompany) : true;
-        const matchesLocation = normLocation ? jobLocation.includes(normLocation) : true;
-        const matchesJobType = normType ? jobType.includes(normType) : true;
+        // Role/Title Match: Check selected roles OR search query
+        let matchesTitle = true;
+        if (selectedRoles.length > 0) {
+            // Match if job title includes ANY of the selected roles
+            matchesTitle = selectedRoles.some(role => jobTitle.includes(role.toLowerCase()));
+            // Optionally, we can also ALSO require searchQuery if it exists?
+            // Usually if both are present, we might want to AND them or OR them.
+            // Given the UI, if I select "Software Engineer" and type "Senior", I expect "Senior Software Engineer".
+            // So: (Match ANY selected role) AND (Match search query if present)
+            if (matchesTitle && normSearch) {
+                matchesTitle = jobTitle.includes(normSearch);
+            }
+        } else {
+            // Default: just use search query
+            matchesTitle = normSearch ? jobTitle.includes(normSearch) : true;
+        }
 
+        const matchesCompany = normCompany ? jobCompany.includes(normCompany) : true;
+
+        // Location Match
+        let matchesLocation = true;
+        if (selectedLocations.length > 0) {
+            matchesLocation = selectedLocations.some(loc => jobLocation.includes(loc.toLowerCase()));
+            if (matchesLocation && normLocation) {
+                matchesLocation = jobLocation.includes(normLocation);
+            }
+        } else {
+            matchesLocation = normLocation ? jobLocation.includes(normLocation) : true;
+        }
+
+        // Job Type Match
+        let matchesJobType = true;
+        if (selectedJobTypes.length > 0) {
+            matchesJobType = selectedJobTypes.some(type => jobType.includes(type.toLowerCase()));
+            if (matchesJobType && normType) {
+                matchesJobType = jobType.includes(normType);
+            }
+        } else {
+            matchesJobType = normType ? jobType.includes(normType) : true;
+        }
+
+        // Job Level Match
         let matchesJobLevel = true;
-        if (normLevel) {
-            if (!jobLevel || jobLevel === "not applicable") {
-                matchesJobLevel = true;
-            } else {
-                matchesJobLevel = jobLevel.includes(normLevel);
+        if (selectedJobLevels.length > 0) {
+            matchesJobLevel = selectedJobLevels.some(level => jobLevel.includes(level.toLowerCase()));
+            if (matchesJobLevel && normLevel) {
+                if (!jobLevel || jobLevel === "not applicable") {
+                    // matchesJobLevel = true; // Wait, if I explicitly type/select level, I probably want matches
+                    // If I select "Entry Level", I don't want "Not Applicable"?
+                    // Let's assume strict match if selected.
+                    matchesJobLevel = jobLevel.includes(normLevel);
+                } else {
+                    matchesJobLevel = jobLevel.includes(normLevel);
+                }
+            }
+        } else {
+            if (normLevel) {
+                if (!jobLevel || jobLevel === "not applicable") {
+                    matchesJobLevel = true;
+                } else {
+                    matchesJobLevel = jobLevel.includes(normLevel);
+                }
             }
         }
 
@@ -405,13 +531,17 @@ export default function Home() {
         }
     }
 
-    const handleApply = (e: React.MouseEvent, url: string) => {
+    const handleApply = (e: React.MouseEvent, url: string, job: Job) => {
         e.preventDefault();
         if (!user) {
             const returnUrl = encodeURIComponent(window.location.href);
             router.push(`/login?redirect=${returnUrl}`);
         } else {
             window.open(url, '_blank', 'noopener,noreferrer');
+            // Optimistically mark as applied
+            if (!appliedJobIds.has(job.id)) {
+                handleToggleApplied(job, true);
+            }
         }
     };
 
@@ -423,184 +553,213 @@ export default function Home() {
 
                     {/* Search Inputs */}
                     <div className={styles.searchBar}>
-                        {/* ... (keep existing) ... */}
-                        <div className={styles.searchInputGroup}>
-                            <Search className={styles.searchIcon} size={20} />
-                            <input
-                                type="text"
-                                placeholder="Job title"
-                                className={styles.searchInput}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onFocus={(e) => {
-                                    setShowRoleSuggestions(true);
-                                    e.target.select();
-                                }}
-                                onBlur={() => setTimeout(() => setShowRoleSuggestions(false), 200)}
-                            />
-                            {showRoleSuggestions && (
-                                <div className={styles.suggestionsPopup}>
-                                    {SUGGESTED_ROLES.filter(r => {
-                                        if (SUGGESTED_ROLES.some(role => role.toLowerCase() === searchQuery.toLowerCase())) {
-                                            return true;
-                                        }
-                                        return r.toLowerCase().includes(searchQuery.toLowerCase());
-                                    }).map((role) => (
-                                        <div
-                                            key={role}
-                                            className={styles.suggestionItem}
-                                            onMouseDown={() => {
-                                                setSearchQuery(role);
-                                                setShowRoleSuggestions(false);
-                                            }}
-                                        >
-                                            {role}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={styles.searchDivider}></div>
-
-                        <div className={styles.searchInputGroup}>
-                            <Briefcase className={styles.searchIcon} size={20} />
-                            <input
-                                type="text"
-                                placeholder="Company"
-                                className={styles.searchInput}
-                                value={companyQuery}
-                                onChange={(e) => setCompanyQuery(e.target.value)}
-                                onFocus={(e) => e.target.select()}
-                            />
-                        </div>
-
-                        <div className={styles.searchDivider}></div>
-
-                        {/* Job Type Search Input */}
-                        <div className={styles.searchInputGroup}>
-                            <Clock className={styles.searchIcon} size={20} />
-                            <input
-                                type="text"
-                                placeholder="Job type"
-                                className={styles.searchInput}
-                                value={jobTypeQuery}
-                                onChange={(e) => setJobTypeQuery(e.target.value)}
-                                onFocus={(e) => {
-                                    setShowJobTypeSuggestions(true);
-                                    e.target.select();
-                                }}
-                                onBlur={() => setTimeout(() => setShowJobTypeSuggestions(false), 200)}
-                            />
-                            {showJobTypeSuggestions && (
-                                <div className={styles.suggestionsPopup}>
-                                    {JOB_TYPES.filter(t => {
-                                        // If the current query matches exactly one of the types, show all (don't filter)
-                                        // This allows the user to switch easily after selecting one.
-                                        if (JOB_TYPES.some(type => type.toLowerCase() === jobTypeQuery.toLowerCase())) {
-                                            return true;
-                                        }
-                                        return t.toLowerCase().includes(jobTypeQuery.toLowerCase());
-                                    }).map((type) => (
-                                        <div
-                                            key={type}
-                                            className={styles.suggestionItem}
-                                            onMouseDown={() => {
-                                                setJobTypeQuery(type);
-                                                setShowJobTypeSuggestions(false);
-                                            }}
-                                        >
-                                            {type}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={styles.searchDivider}></div>
-
-                        {/* Job Level Search Input */}
-                        <div className={styles.searchInputGroup}>
-                            <Briefcase className={styles.searchIcon} size={20} />
-                            <input
-                                type="text"
-                                placeholder="Experience"
-                                className={styles.searchInput}
-                                value={jobLevelQuery}
-                                onChange={(e) => setJobLevelQuery(e.target.value)}
-                                onFocus={(e) => {
-                                    setShowJobLevelSuggestions(true);
-                                    e.target.select();
-                                }}
-                                onBlur={() => setTimeout(() => setShowJobLevelSuggestions(false), 200)}
-                            />
-                            {showJobLevelSuggestions && (
-                                <div className={styles.suggestionsPopup}>
-                                    {JOB_LEVELS.filter(l => {
-                                        if (JOB_LEVELS.some(level => level.toLowerCase() === jobLevelQuery.toLowerCase())) {
-                                            return true;
-                                        }
-                                        return l.toLowerCase().includes(jobLevelQuery.toLowerCase());
-                                    }).map((level) => (
-                                        <div
-                                            key={level}
-                                            className={styles.suggestionItem}
-                                            onMouseDown={() => {
-                                                setJobLevelQuery(level);
-                                                setShowJobLevelSuggestions(false);
-                                            }}
-                                        >
-                                            {level}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={styles.searchDivider}></div>
-
-                        {/* Location Search Input */}
-                        <div className={styles.searchInputGroup}>
-                            <MapPin className={styles.searchIcon} size={20} />
-                            <input
-                                type="text"
-                                placeholder="City or location"
-                                className={styles.searchInput}
-                                value={locationQuery}
-                                onChange={(e) => setLocationQuery(e.target.value)}
-                                onFocus={(e) => {
-                                    setShowCitySuggestions(true);
-                                    e.target.select();
-                                }}
-                                onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
-                            />
-                            {showCitySuggestions && (
-                                <div className={styles.suggestionsPopup}>
-                                    {SUGGESTED_CITIES.filter(c => {
-                                        if (SUGGESTED_CITIES.some(city => city.toLowerCase() === locationQuery.toLowerCase())) {
-                                            return true;
-                                        }
-                                        return c.toLowerCase().includes(locationQuery.toLowerCase());
-                                    }).map((city) => (
-                                        <div
-                                            key={city}
-                                            className={styles.suggestionItem}
-                                            onMouseDown={() => {
-                                                setLocationQuery(city);
-                                                setShowCitySuggestions(false);
-                                            }}
-                                        >
-                                            <MapPin size={14} />
-                                            {city}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <button className={styles.findButton}>
-                            Find jobs
+                        <button
+                            className={styles.mobileFilterToggle}
+                            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Filter size={18} />
+                                <span>Search & Filters</span>
+                            </div>
+                            {mobileFiltersOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </button>
+
+                        <div className={`${styles.filterInputs} ${mobileFiltersOpen ? styles.open : ''}`}>
+                            <div className={styles.searchInputGroup}>
+                                <Search className={styles.searchIcon} size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Job title"
+                                    className={styles.searchInput}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onFocus={(e) => {
+                                        setShowRoleSuggestions(true);
+                                        e.target.select();
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowRoleSuggestions(false), 200)}
+                                />
+                                {showRoleSuggestions && (
+                                    <div className={styles.suggestionsPopup}>
+                                        {SUGGESTED_ROLES.filter(r => {
+                                            if (SUGGESTED_ROLES.some(role => role.toLowerCase() === searchQuery.toLowerCase())) {
+                                                return true;
+                                            }
+                                            return r.toLowerCase().includes(searchQuery.toLowerCase());
+                                        }).map((role) => (
+                                            <div
+                                                key={role}
+                                                className={styles.suggestionItem}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault(); // Prevent blur
+                                                    toggleSelection(role, selectedRoles, setSelectedRoles);
+                                                }}
+                                            >
+                                                {selectedRoles.includes(role) ? (
+                                                    <CheckSquare size={16} className="text-blue-500" style={{ color: '#60a5fa' }} />
+                                                ) : (
+                                                    <Square size={16} style={{ color: '#52525b' }} />
+                                                )}
+                                                {role}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className={styles.searchDivider}></div>
+
+                            <div className={styles.searchInputGroup}>
+                                <Briefcase className={styles.searchIcon} size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Company"
+                                    className={styles.searchInput}
+                                    value={companyQuery}
+                                    onChange={(e) => setCompanyQuery(e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                />
+                            </div>
+
+                            <div className={styles.searchDivider}></div>
+
+                            {/* Job Type Search Input */}
+                            <div className={styles.searchInputGroup}>
+                                <Clock className={styles.searchIcon} size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Job type"
+                                    className={styles.searchInput}
+                                    value={jobTypeQuery}
+                                    onChange={(e) => setJobTypeQuery(e.target.value)}
+                                    onFocus={(e) => {
+                                        setShowJobTypeSuggestions(true);
+                                        e.target.select();
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowJobTypeSuggestions(false), 200)}
+                                />
+                                {showJobTypeSuggestions && (
+                                    <div className={styles.suggestionsPopup}>
+                                        {JOB_TYPES.filter(t => {
+                                            if (JOB_TYPES.some(type => type.toLowerCase() === jobTypeQuery.toLowerCase())) {
+                                                return true;
+                                            }
+                                            return t.toLowerCase().includes(jobTypeQuery.toLowerCase());
+                                        }).map((type) => (
+                                            <div
+                                                key={type}
+                                                className={styles.suggestionItem}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    toggleSelection(type, selectedJobTypes, setSelectedJobTypes);
+                                                }}
+                                            >
+                                                {selectedJobTypes.includes(type) ? (
+                                                    <CheckSquare size={16} style={{ color: '#60a5fa' }} />
+                                                ) : (
+                                                    <Square size={16} style={{ color: '#52525b' }} />
+                                                )}
+                                                {type}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className={styles.searchDivider}></div>
+
+                            {/* Job Level Search Input */}
+                            <div className={styles.searchInputGroup}>
+                                <Briefcase className={styles.searchIcon} size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Experience"
+                                    className={styles.searchInput}
+                                    value={jobLevelQuery}
+                                    onChange={(e) => setJobLevelQuery(e.target.value)}
+                                    onFocus={(e) => {
+                                        setShowJobLevelSuggestions(true);
+                                        e.target.select();
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowJobLevelSuggestions(false), 200)}
+                                />
+                                {showJobLevelSuggestions && (
+                                    <div className={styles.suggestionsPopup}>
+                                        {JOB_LEVELS.filter(l => {
+                                            if (JOB_LEVELS.some(level => level.toLowerCase() === jobLevelQuery.toLowerCase())) {
+                                                return true;
+                                            }
+                                            return l.toLowerCase().includes(jobLevelQuery.toLowerCase());
+                                        }).map((level) => (
+                                            <div
+                                                key={level}
+                                                className={styles.suggestionItem}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    toggleSelection(level, selectedJobLevels, setSelectedJobLevels);
+                                                }}
+                                            >
+                                                {selectedJobLevels.includes(level) ? (
+                                                    <CheckSquare size={16} style={{ color: '#60a5fa' }} />
+                                                ) : (
+                                                    <Square size={16} style={{ color: '#52525b' }} />
+                                                )}
+                                                {level}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className={styles.searchDivider}></div>
+
+                            {/* Location Search Input */}
+                            <div className={styles.searchInputGroup}>
+                                <MapPin className={styles.searchIcon} size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="City or location"
+                                    className={styles.searchInput}
+                                    value={locationQuery}
+                                    onChange={(e) => setLocationQuery(e.target.value)}
+                                    onFocus={(e) => {
+                                        setShowCitySuggestions(true);
+                                        e.target.select();
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
+                                />
+                                {showCitySuggestions && (
+                                    <div className={styles.suggestionsPopup}>
+                                        {SUGGESTED_CITIES.filter(c => {
+                                            if (SUGGESTED_CITIES.some(city => city.toLowerCase() === locationQuery.toLowerCase())) {
+                                                return true;
+                                            }
+                                            return c.toLowerCase().includes(locationQuery.toLowerCase());
+                                        }).map((city) => (
+                                            <div
+                                                key={city}
+                                                className={styles.suggestionItem}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    toggleSelection(city, selectedLocations, setSelectedLocations);
+                                                }}
+                                            >
+                                                {selectedLocations.includes(city) ? (
+                                                    <CheckSquare size={16} style={{ color: '#60a5fa' }} />
+                                                ) : (
+                                                    <Square size={16} style={{ color: '#52525b' }} />
+                                                )}
+                                                {city}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <button className={styles.findButton}>
+                                Find jobs
+                            </button>
+                        </div>
                     </div>
 
                     {/* Date Picker (Simple) */}
@@ -649,6 +808,9 @@ export default function Home() {
                         <h2>Jobs for you</h2>
                         <span>{filteredJobs.length} Jobs Fetched</span>
                     </div>
+                    <p className={styles.listHeaderNote}>
+                        Note: Only the previous 7 days' jobs are shown.
+                    </p>
 
                     {loading ? (
                         <>
@@ -772,27 +934,77 @@ export default function Home() {
 
                                 <div className={styles.actionButtons}>
                                     {selectedJob.job_url_direct && selectedJob.job_url_direct !== 'NULL' && (
+                                        appliedJobIds.has(selectedJob.id) ? (
+                                            <button
+                                                onClick={() => handleToggleApplied(selectedJob)}
+                                                className={styles.appliedButton}
+                                                title="Click to remove applied status"
+                                            >
+                                                Applied <Check size={18} />
+                                            </button>
+                                        ) : (
+                                            <a
+                                                href={selectedJob.job_url_direct}
+                                                onClick={(e) => handleApply(e, selectedJob.job_url_direct!, selectedJob)}
+                                                className={styles.applyButton}
+                                            >
+                                                Apply Direct
+                                                <ExternalLink size={18} />
+                                            </a>
+                                        )
+                                    )}
+
+                                    {appliedJobIds.has(selectedJob.id) ? (
+                                        // If applied, show "Applied" button (unless Direct was also shown and applied? Usually just show one if both are same status, but here they track the same job ID)
+                                        // If Direct button is present and says "Applied", we probably don't need this one to say "Applied" too, or both can.
+                                        // However, simplifying: selectedJob.id is the key. So both would toggle.
+                                        // To avoid visual clutter, if Direct exists, maybe we hide this secondary one if applied?
+                                        // But usually "Apply on Site" is the main one.
+                                        // Let's just make this one reflect status too.
+                                        (!selectedJob.job_url_direct || selectedJob.job_url_direct === 'NULL') ? (
+                                            <button
+                                                onClick={() => handleToggleApplied(selectedJob)}
+                                                className={styles.appliedButton}
+                                                title="Click to remove applied status"
+                                            >
+                                                Applied on {selectedJob.site || "Site"} <Check size={18} />
+                                            </button>
+                                        ) : (
+                                            // If Direct exists and is shown, and we are applied, we might not need to show THIS button as applied too.
+                                            // But the user might want to access the "Apply on X" link again?
+                                            // The logic: If applied, allow toggle off.
+                                            // If "Apply Direct" marks it applied, this button also becomes "Applied".
+                                            // Let's just render the 'Apply on Site' version if direct is missing, OR if we want to show both options?
+                                            // Existing code shows BOTH if direct exists.
+                                            // If applied, showing two big green "Applied" buttons is weird.
+                                            // Let's just make the second one a "View Link" if applied?
+                                            // Or just keep it consistent. The user said "mark it as applied" and "chance to make it not applied".
+                                            null
+                                        )
+                                    ) : (
                                         <a
-                                            href={selectedJob.job_url_direct}
-                                            onClick={(e) => handleApply(e, selectedJob.job_url_direct!)}
-                                            className={styles.applyButton}
+                                            href={selectedJob.job_url}
+                                            onClick={(e) => handleApply(e, selectedJob.job_url, selectedJob)}
+                                            className={
+                                                (selectedJob.job_url_direct && selectedJob.job_url_direct !== 'NULL')
+                                                    ? styles.saveButton
+                                                    : styles.applyButton
+                                            }
                                         >
-                                            Apply Direct
+                                            {selectedJob.site ? `Apply on ${selectedJob.site}` : "Apply now"}
                                             <ExternalLink size={18} />
                                         </a>
                                     )}
-                                    <a
-                                        href={selectedJob.job_url}
-                                        onClick={(e) => handleApply(e, selectedJob.job_url)}
-                                        className={
-                                            (selectedJob.job_url_direct && selectedJob.job_url_direct !== 'NULL')
-                                                ? styles.saveButton
-                                                : styles.applyButton
-                                        }
-                                    >
-                                        {selectedJob.site ? `Apply on ${selectedJob.site}` : "Apply now"}
-                                        <ExternalLink size={18} />
-                                    </a>
+
+                                    {/* If we hid the second button when applied because the first one shows applied, we need to ensure at least one applied button shows. */}
+                                    {/* If job_url_direct exists -> First button shows Applied. Second button is hidden (null). Good. */}
+                                    {/* If job_url_direct NULL -> First button hidden. Second button shows Applied. Good. */}
+                                    {/* Wait, what if someone wants to visit the link again after applying? */}
+                                    {/* Maybe the "Applied" button should essentially act as a toggle, but what about re-visiting? */}
+                                    {/* User request: "chance to make it not applied". So clicking "Applied" should toggle off. */}
+                                    {/* If they want to visit again, they can toggle off to get the link back, OR we add a small icon link. */}
+                                    {/* For now, sticking to the requested behavior: Mark as applied (Green), Click to un-apply. */}
+
                                     <button
                                         onClick={() => handleToggleSave(selectedJob.id)}
                                         className={styles.shareButton}
@@ -820,6 +1032,11 @@ export default function Home() {
                                         )}
                                     </div>
                                 </div>
+                                {appliedJobIds.has(selectedJob.id) && (
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <CheckCircle size={14} /> Click the checkmark to remove applied status
+                                    </div>
+                                )}
                             </div>
 
                             {/* Job Content Scrollable Area */}

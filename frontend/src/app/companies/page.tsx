@@ -66,22 +66,66 @@ export default function CompaniesPage() {
     const [hasSearched, setHasSearched] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+    const [savedCompanyNames, setSavedCompanyNames] = useState<Set<string>>(new Set());
     const [saving, setSaving] = useState(false);
 
-    // Fetch saved jobs
+    // Fetch saved jobs and companies
     useEffect(() => {
         const fetchSaved = async () => {
             if (!user) {
                 setSavedJobIds(new Set());
+                setSavedCompanyNames(new Set());
                 return;
             }
-            const { data } = await supabase.from('saved_jobs').select('job_id').eq('user_id', user.id);
-            if (data) {
-                setSavedJobIds(new Set(data.map(d => d.job_id)));
+
+            // Fetch saved jobs
+            const { data: savedJobs } = await supabase.from('saved_jobs').select('job_id').eq('user_id', user.id);
+            if (savedJobs) {
+                setSavedJobIds(new Set(savedJobs.map(d => d.job_id)));
+            }
+
+            // Fetch saved companies
+            const { data: savedCompanies } = await supabase.from('saved_companies').select('company_name').eq('user_id', user.id);
+            if (savedCompanies) {
+                setSavedCompanyNames(new Set(savedCompanies.map(c => c.company_name)));
             }
         };
         fetchSaved();
     }, [user]);
+
+    const handleToggleSaveCompany = async (e: React.MouseEvent, companyName: string) => {
+        e.preventDefault(); // Stop navigation
+        e.stopPropagation();
+
+        if (!user) {
+            router.push('/login?redirect=/companies');
+            return;
+        }
+
+        const isSaved = savedCompanyNames.has(companyName);
+
+        if (isSaved) {
+            const { error } = await supabase.from('saved_companies').delete().match({ user_id: user.id, company_name: companyName });
+            if (!error) {
+                setSavedCompanyNames(prev => {
+                    const next = new Set(prev);
+                    next.delete(companyName);
+                    return next;
+                });
+            }
+        } else {
+            const { error } = await supabase.from('saved_companies').insert({ user_id: user.id, company_name: companyName });
+            if (!error) {
+                setSavedCompanyNames(prev => {
+                    const next = new Set(prev);
+                    next.add(companyName);
+                    return next;
+                });
+            } else {
+                console.error("Failed to save company", error);
+            }
+        }
+    };
 
     const handleToggleSave = async (jobId: string) => {
         if (!user) {
@@ -313,24 +357,59 @@ export default function CompaniesPage() {
                     ) : results.length > 0 ? (
                         <div className={styles.logoGrid}>
                             {results.map((group) => (
-                                <div key={group.name} className={styles.logoItem}>
+                                <div
+                                    key={group.name}
+                                    className={styles.logoItem}
+                                    onClick={() => router.push(`/companies/${encodeURIComponent(group.name)}`)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            router.push(`/companies/${encodeURIComponent(group.name)}`);
+                                        }
+                                    }}
+                                >
+                                    <button
+                                        onClick={(e) => handleToggleSaveCompany(e, group.name)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '8px',
+                                            right: '8px',
+                                            background: 'rgba(0,0,0,0.5)',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            padding: '6px',
+                                            cursor: 'pointer',
+                                            zIndex: 20,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: savedCompanyNames.has(group.name) ? '#3b82f6' : 'white',
+                                            transition: 'transform 0.2s'
+                                        }}
+                                        title={savedCompanyNames.has(group.name) ? "Unsave Company" : "Save Company"}
+                                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        <Bookmark size={14} fill={savedCompanyNames.has(group.name) ? "currentColor" : "none"} />
+                                    </button>
+
                                     {group.jobs[0].company_logo ? (
                                         <img
                                             src={group.jobs[0].company_logo}
                                             alt={`${group.name} logo`}
                                             className={styles.logoImage}
                                             onError={(e) => {
-                                                // Fallback if image fails to load
                                                 e.currentTarget.style.display = 'none';
-                                                e.currentTarget.nextElementSibling?.removeAttribute('style'); // Show fallback icon
+                                                e.currentTarget.parentElement?.querySelector('.fallback-icon')?.removeAttribute('style');
                                             }}
                                         />
                                     ) : null}
 
                                     <Briefcase
                                         size={32}
-                                        className={styles.fallbackIcon}
-                                        style={{ display: group.jobs[0].company_logo ? 'none' : 'block' }} // Hide if logo exists initially
+                                        className={`${styles.fallbackIcon} fallback-icon`}
+                                        style={{ display: group.jobs[0].company_logo ? 'none' : 'block' }}
                                     />
 
                                     <div className={styles.companyNameTooltip}>

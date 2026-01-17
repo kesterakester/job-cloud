@@ -12,9 +12,10 @@ import {
     Trash2,
     MapPin,
     Clock,
+    CheckCircle,
     Building
 } from "lucide-react";
-import styles from "./saved.module.css";
+import styles from "./applied.module.css";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar"; // Assuming globally available or we can just skip for now as Layout has it
 
@@ -36,27 +37,27 @@ type SavedJobItem = {
     job: Job;
 };
 
-export default function SavedJobsPage() {
+export default function AppliedJobsPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const [savedJobs, setSavedJobs] = useState<SavedJobItem[]>([]);
+    const [appliedJobs, setAppliedJobs] = useState<SavedJobItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!authLoading && !user) {
-            router.push('/login?redirect=/saved-jobs');
+            router.push('/login?redirect=/applied-jobs');
         }
     }, [authLoading, user, router]);
 
-    const fetchSavedJobs = async () => {
+    const fetchAppliedJobs = async () => {
         if (!user) return;
         setLoading(true);
 
         const { data, error } = await supabase
-            .from('saved_jobs')
+            .from('applied_jobs')
             .select(`
                 id,
-                created_at,
+                applied_at,
                 job:jobs (
                     id,
                     title,
@@ -69,44 +70,49 @@ export default function SavedJobsPage() {
                 )
             `)
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+            .order('applied_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching saved jobs:', error);
+            console.error('Error fetching applied jobs:', error);
         } else {
             // Filter out any where job is null (deleted)
-            const validItems = (data || []).filter(item => item.job !== null) as unknown as SavedJobItem[];
-            setSavedJobs(validItems);
+            const validItems = (data || []).map(item => ({
+                ...item,
+                created_at: item.applied_at // Map applied_at to created_at for reuse of type
+            })).filter(item => item.job !== null) as unknown as SavedJobItem[];
+            setAppliedJobs(validItems);
         }
         setLoading(false);
     };
 
     useEffect(() => {
         if (user) {
-            fetchSavedJobs();
+            fetchAppliedJobs();
         }
     }, [user]);
 
-    const handleRemove = async (savedJobId: string) => {
+    const handleRemove = async (appliedJobId: string) => {
+        if (!confirm("Are you sure you want to remove this job from your applied list?")) return;
+
         // Optimistic update
-        setSavedJobs(prev => prev.filter(item => item.id !== savedJobId));
+        setAppliedJobs(prev => prev.filter(item => item.id !== appliedJobId));
 
         const { error } = await supabase
-            .from('saved_jobs')
+            .from('applied_jobs')
             .delete()
-            .eq('id', savedJobId);
+            .eq('id', appliedJobId);
 
         if (error) {
             console.error("Failed to remove job", error);
             // Revert on error? Or just fetch again.
-            fetchSavedJobs();
+            fetchAppliedJobs();
         }
     };
 
     if (authLoading || loading) {
         return (
             <div className={styles.loading}>
-                Loading saved jobs...
+                Loading applied jobs...
             </div>
         );
     }
@@ -118,11 +124,11 @@ export default function SavedJobsPage() {
             <header className={styles.header}>
                 <div className={styles.headerContent}>
                     <div className={styles.title}>
-                        <Bookmark size={32} className="text-blue-500" />
-                        Saved Jobs
+                        <CheckCircle size={32} className="text-emerald-500" style={{ color: '#10b981' }} />
+                        Applied Jobs
                     </div>
                     <p className={styles.note}>
-                        Note: Jobs older than 7 days will be removed as per the database policy.
+                        Track all the jobs you have applied to.
                     </p>
                 </div>
                 <Link href="/jobs" className={styles.backLink}>
@@ -131,14 +137,14 @@ export default function SavedJobsPage() {
                 </Link>
             </header>
 
-            {savedJobs.length === 0 ? (
+            {appliedJobs.length === 0 ? (
                 <div className={styles.emptyState}>
-                    <h2>No saved jobs yet</h2>
-                    <p>Jobs you save will appear here for quick access.</p>
+                    <h2>No applied jobs yet</h2>
+                    <p>Jobs you apply to will be tracked here.</p>
                 </div>
             ) : (
                 <div className={styles.grid}>
-                    {savedJobs.map((item) => (
+                    {appliedJobs.map((item) => (
                         <div key={item.id} className={styles.card}>
                             <div className={styles.cardHeader}>
                                 <div>
@@ -149,7 +155,7 @@ export default function SavedJobsPage() {
                                     </p>
                                 </div>
                                 <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-                                    {new Date(item.created_at).toLocaleDateString()}
+                                    Applied: {new Date(item.created_at).toLocaleDateString()}
                                 </span>
                             </div>
 
@@ -170,13 +176,14 @@ export default function SavedJobsPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={styles.applyButton}
+                                    style={{ backgroundColor: '#27272a', borderColor: '#3f3f46' }}
                                 >
-                                    Apply Now <ExternalLink size={16} />
+                                    View Job Link <ExternalLink size={16} />
                                 </a>
                                 <button
                                     onClick={() => handleRemove(item.id)}
                                     className={styles.removeButton}
-                                    title="Remove from Saved"
+                                    title="Remove from Applied"
                                 >
                                     <Trash2 size={20} />
                                 </button>
