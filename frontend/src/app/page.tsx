@@ -4,10 +4,19 @@
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
 import { FileText, ArrowRight, Loader2, CheckCircle, Upload, AlertCircle, Award, Building, Briefcase, Construction } from "lucide-react";
+import Footer from "@/components/Footer";
 import Modal from "@/components/Modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
+
+interface ResumeScore {
+    id: string;
+    resume_name: string;
+    total_score: number;
+    created_at: string;
+}
 
 export default function Home() {
     const { user, loading: authLoading } = useAuth();
@@ -17,6 +26,11 @@ export default function Home() {
     const [error, setError] = useState<string | null>(null);
     const [loadingStep, setLoadingStep] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Resume Limit & History
+    const [canUpload, setCanUpload] = useState(true);
+    const [checkingEligibility, setCheckingEligibility] = useState(true);
+    const [scoreHistory, setScoreHistory] = useState<ResumeScore[]>([]);
 
     const LOADING_STEPS = [
         "Uploading Resume...",
@@ -56,6 +70,62 @@ export default function Home() {
         return () => clearInterval(interval);
     }, [loading]);
 
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (user) {
+            checkEligibility();
+            fetchScoreHistory();
+        } else {
+            setCheckingEligibility(false);
+        }
+    }, [user, authLoading]);
+
+    const checkEligibility = async () => {
+        if (!user) return;
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('last_resume_upload_at')
+                .eq('id', user.id)
+                .single();
+
+            if (data?.last_resume_upload_at) {
+                const lastUpload = new Date(data.last_resume_upload_at);
+                const today = new Date();
+
+                if (lastUpload.toDateString() === today.toDateString()) {
+                    setCanUpload(false);
+                    setError("You have reached your daily resume upload limit. Please try again tomorrow.");
+                } else {
+                    setCanUpload(true);
+                }
+            }
+        } catch (err) {
+            console.error("Error checking upload eligibility:", err);
+        } finally {
+            setCheckingEligibility(false);
+        }
+    };
+
+    const fetchScoreHistory = async () => {
+        if (!user) return;
+        try {
+            const { data, error } = await supabase
+                .from('resume_scores')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(3);
+
+            if (data) {
+                setScoreHistory(data);
+            }
+        } catch (err) {
+            console.error("Error fetching resume history:", err);
+        }
+    };
+
     const router = useRouter();
 
     const handleMatchJobs = () => {
@@ -72,6 +142,10 @@ export default function Home() {
 
     const handleUpload = async () => {
         if (!file) return;
+        if (!canUpload) {
+            setError("You have reached your daily resume upload limit.");
+            return;
+        }
 
         setLoading(true);
         setError(null);
@@ -104,6 +178,30 @@ export default function Home() {
 
             const data = await response.json();
             setResult(data);
+
+            // Supabase Tracking
+            if (user) {
+                // Update profile last upload time
+                await supabase
+                    .from('profiles')
+                    .update({ last_resume_upload_at: new Date().toISOString() })
+                    .eq('id', user.id);
+
+                // Save score
+                if (data.score && typeof data.score.totalScore === 'number') {
+                    await supabase.from('resume_scores').insert({
+                        user_id: user.id,
+                        resume_name: file.name,
+                        total_score: data.score.totalScore,
+                        score_details: data.score
+                    });
+
+                    fetchScoreHistory();
+                }
+
+                setCanUpload(false);
+            }
+
         } catch (err) {
             console.error(err);
             setError(err instanceof Error ? err.message : "Failed to connect to the parser service.");
@@ -275,6 +373,39 @@ export default function Home() {
                                     </div>
                                 </div>
                             </div>
+
+                        )}
+
+                        {/* Recent Scans History (Bottom of Center Column) */}
+                        {scoreHistory.length > 0 && !result && user && (
+                            <div className={styles.recentScansContainer}>
+                                <h4 className={styles.recentScansTitle}>
+                                    <FileText size={18} className={styles.scansIcon} />
+                                    Recent Scans
+                                </h4>
+                                <div className={styles.scansList}>
+                                    {scoreHistory.map((score) => (
+                                        <div key={score.id} className={styles.scanItem}>
+                                            <div className={styles.scanInfo}>
+                                                <p className={styles.scanName}>
+                                                    {score.resume_name || "Resume"}
+                                                </p>
+                                                <p className={styles.scanDate}>
+                                                    {new Date(score.created_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <div className={styles.scanScoreContainer}>
+                                                <span className={`${styles.scanScoreValue} ${score.total_score >= 70 ? styles.scoreGreen :
+                                                    score.total_score >= 40 ? styles.scoreYellow : styles.scoreRed
+                                                    }`}>
+                                                    {score.total_score} ±5
+                                                </span>
+                                                <span className={styles.scanScoreLabel}>Score</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -290,26 +421,9 @@ export default function Home() {
                         </Link>
                     </div>
                 </div>
-            </main>
+            </main >
 
-            <footer className={styles.footer}>
-                <div className={styles.footerContent}>
-                    <div className={styles.capstone}>
-                        Developed as a Capstone Project
-                    </div>
-
-                    <div className={styles.centerBlock}>
-                        <div className={styles.copy}>
-                            &copy; {new Date().getFullYear()} Job Cloud. All rights reserved.
-                        </div>
-                    </div>
-
-                    <div className={styles.footerLinks}>
-                        <Link href="/privacy-policy">Privacy Policy</Link>
-                        <Link href="/terms-conditions">Terms & Conditions</Link>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <div className={styles.modalContent}>
