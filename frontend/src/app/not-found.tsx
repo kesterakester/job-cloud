@@ -39,7 +39,7 @@ export default function NotFound() {
 
                     <div className={pageStyles.centerBlock}>
                         <div className={pageStyles.copy}>
-                            &copy; {new Date().getFullYear()} Job Cloud. All rights reserved.
+                            &copy; {new Date().getFullYear()} HireMind. All rights reserved.
                         </div>
                     </div>
 

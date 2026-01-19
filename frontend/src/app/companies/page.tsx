@@ -441,7 +441,7 @@ export default function CompaniesPage() {
 
                     <div className={styles.centerBlock}>
                         <div className={styles.copy}>
-                            &copy; {new Date().getFullYear()} Job Cloud. All rights reserved.
+                            &copy; {new Date().getFullYear()} HireMind. All rights reserved.
                         </div>
                     </div>
 
