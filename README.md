@@ -1,4 +1,4 @@
-# HireMind / Job Cloud
+# HireMind - Automated Job Crawler & Matching Platform
 
 HireMind is a modern, responsive job board application designed to connect job seekers with their ideal roles efficiently. It features a sleek user interface and an intelligent resume matching system (Work in Progress) to help users find jobs that fit their skills and experience.
 
