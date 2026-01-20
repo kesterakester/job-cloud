@@ -6,6 +6,8 @@ from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
 import json
 import pytz
+import time
+import random
 
 load_dotenv()
 
@@ -30,17 +32,22 @@ for r in roles:
         try:
             print("Scraping", r, c)
             df = scrape_jobs(
-                site_name=["indeed","linkedin","google"],
+                site_name=["indeed", "linkedin", "google"],  
                 search_term=r,
                 google_search_term=f"{r} jobs near {c} since yesterday",
                 location=loc,
-                results_wanted=50,
+                results_wanted=100,
                 hours_old=24,
                 country_indeed="INDIA",
                 linkedin_fetch_description=True
             )
-        except:
+            print(f"Found {len(df)} jobs for {r} in {c}")
+        except Exception as e:
+            print(f"Error scraping {r} in {c}: {e}")
             continue
+        
+        # Add a random delay to avoid rate limiting
+        time.sleep(random.uniform(5, 15))
 
         if len(df):
             df["role"] = r
