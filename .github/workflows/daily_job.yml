@@ -3,12 +3,13 @@ name: Daily Job Scraper
 on:
   schedule:
     - cron: '30 18 * * *'
-  workflow_dispatch: # Allows manual triggering from the Actions tab
+  workflow_dispatch:
 
 jobs:
-  scrape-and-upload:
+  scrape-batch-1:
     runs-on: ubuntu-latest
-    
+    env:
+      JOB_BATCH: batch1
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,9 +25,71 @@ jobs:
           pip install python-jobspy
           pip install -r requirements.txt
 
-      - name: Run Scraper Script
+      - name: Run Scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        # -u forces stdout to be unbuffered so we see logs immediately
+        run: python -u run_jobs_supabase.py
+
+
+  scrape-batch-2:
+    runs-on: ubuntu-latest
+    env:
+      JOB_BATCH: batch2
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install python-jobspy
+          pip install -r requirements.txt
+      - name: Run Scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -u run_jobs_supabase.py
+
+
+  scrape-batch-3:
+    runs-on: ubuntu-latest
+    env:
+      JOB_BATCH: batch3
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install python-jobspy
+          pip install -r requirements.txt
+      - name: Run Scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python -u run_jobs_supabase.py
+
+
+  scrape-batch-4:
+    runs-on: ubuntu-latest
+    env:
+      JOB_BATCH: batch4
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install python-jobspy
+          pip install -r requirements.txt
+      - name: Run Scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python -u run_jobs_supabase.py
