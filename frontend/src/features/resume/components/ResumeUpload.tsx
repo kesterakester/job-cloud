@@ -5,8 +5,33 @@ import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-reac
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 
+export interface ResumeAnalysisResult {
+    resume: {
+        profile: {
+            name?: string;
+            email?: string;
+            phone?: string;
+            location?: string;
+        };
+        text: string;
+    };
+    score: {
+        totalScore: number;
+        breakdown: {
+            contactInfo: number;
+            structure: number;
+            experience: number;
+            keywords: number;
+            impact: number;
+        };
+        feedback: string[];
+    };
+    keywords: string[];
+    softSkills?: string[];
+}
+
 interface ResumeUploadProps {
-    onUploadComplete: (keywords: string[]) => void;
+    onUploadComplete: (result: ResumeAnalysisResult) => void;
 }
 
 interface ResumeScore {
@@ -195,7 +220,7 @@ export default function ResumeUpload({ onUploadComplete }: ResumeUploadProps) {
             // Looking at main.py lines 208: "keywords": keywords
 
             if (data.keywords && Array.isArray(data.keywords)) {
-                onUploadComplete(data.keywords);
+                onUploadComplete(data as ResumeAnalysisResult);
             } else {
                 // Fallback if keywords aren't directly there, though they should be based on the code I read
                 setError('Could not extract keywords from resume.');
