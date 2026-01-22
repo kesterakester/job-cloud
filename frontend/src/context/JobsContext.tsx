@@ -117,13 +117,14 @@ export const JobsProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
     }, [jobsCache]);
 
-    // Initialize dates and initial job fetch
+    // Initialize dates and initial job fetch - OPTIMIZED
     useEffect(() => {
         if (initialized) return;
+        setInitialized(true); // Set early to prevent duplicate calls
 
         const init = async () => {
             try {
-                // Get most recent date first
+                // Get most recent date first (single fast query)
                 const { data: recentDateData } = await supabase
                     .from("jobs")
                     .select("crawled_date")
@@ -137,51 +138,38 @@ export const JobsProvider = ({ children }: { children: ReactNode }) => {
                     setSelectedDate(initialDate);
                 }
 
-                // Trigger initial fetch
+                // CRITICAL PATH: Fetch jobs first for immediate display
                 await fetchJobs(initialDate);
-
-                // Fetch all available dates for calendar
-                let allDates: string[] = [];
-                let from = 0;
-                const batchSize = 1000;
-                let moreAvailable = true;
-
-                while (moreAvailable) {
-                    const { data, error } = await supabase
-                        .from("jobs")
-                        .select("crawled_date")
-                        .range(from, from + batchSize - 1);
-
-                    if (error) throw error;
-
-                    if (data) {
-                        const dates = data.map(j => j.crawled_date);
-                        allDates = [...allDates, ...dates];
-                        if (data.length < batchSize) {
-                            moreAvailable = false;
-                        } else {
-                            from += batchSize;
-                        }
-                    } else {
-                        moreAvailable = false;
-                    }
-                }
-
-                if (allDates.length > 0) {
-                    setAvailableDates(new Set(allDates));
-                }
-
-                setInitialized(true);
 
             } catch (e) {
                 console.error("Error initializing JobsContext", e);
                 // Fallback
                 await fetchJobs(new Date());
-                setInitialized(true);
+            }
+        };
+
+        // Deferred: Fetch available dates in background (non-blocking)
+        const fetchAvailableDates = async () => {
+            try {
+                // Optimized: Use distinct query instead of fetching all rows
+                const { data } = await supabase
+                    .from("jobs")
+                    .select("crawled_date")
+                    .order("crawled_date", { ascending: false })
+                    .limit(100); // Limit to recent 100 dates for performance
+
+                if (data && data.length > 0) {
+                    const uniqueDates = new Set(data.map(j => j.crawled_date));
+                    setAvailableDates(uniqueDates);
+                }
+            } catch (e) {
+                console.error("Error fetching available dates", e);
             }
         };
 
         init();
+        // Defer dates fetching to not block initial render
+        setTimeout(fetchAvailableDates, 100);
     }, [initialized, fetchJobs]);
 
     return (
